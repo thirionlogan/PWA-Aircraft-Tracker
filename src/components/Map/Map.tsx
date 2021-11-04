@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, Marker, TileLayer, Popup } from 'react-leaflet';
+import {
+  MapContainer,
+  Marker,
+  TileLayer,
+  Popup,
+  useMap,
+  Tooltip,
+} from 'react-leaflet';
 import { icon } from 'leaflet';
 import { getAllStates } from '../../client';
 
@@ -59,8 +66,42 @@ const stateToObject = ([
   position_source,
 });
 
+function CurrentPositionMarker({
+  currentLocation,
+}: {
+  currentLocation: GeolocationPosition | undefined;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(
+      currentLocation?.coords
+        ? [currentLocation.coords.latitude, currentLocation.coords.longitude]
+        : [40.7608, -111.891]
+    );
+  }, [currentLocation]);
+  return currentLocation?.coords ? (
+    <Marker
+      position={[
+        currentLocation.coords.latitude,
+        currentLocation.coords.longitude,
+      ]}
+    >
+      <Popup>
+        <ul>
+          <li>Current Position:</li>
+          <li>Latitude: {currentLocation.coords.latitude}</li>
+          <li>Longitude: {currentLocation.coords.longitude}</li>
+        </ul>
+      </Popup>
+      <Tooltip>Current Position</Tooltip>
+    </Marker>
+  ) : null;
+}
+
 function Map() {
   const [markers, setMarkers] = useState([]);
+  const [currentLocation, setCurrentLocation] = useState<GeolocationPosition>();
 
   useEffect(() => {
     getAllStates().then(({ data: { states } }) => {
@@ -80,6 +121,10 @@ function Map() {
 
       setMarkers(aircraft);
     });
+
+    navigator.geolocation.getCurrentPosition((geolocationPosition) => {
+      setCurrentLocation(geolocationPosition);
+    });
   }, []);
 
   const airplaneIcon = icon({
@@ -97,6 +142,7 @@ function Map() {
           attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
           url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
         />
+        <CurrentPositionMarker currentLocation={currentLocation} />
         {markers.map(
           ({
             icao24,
@@ -124,7 +170,7 @@ function Map() {
                     </li>
                   ) : null}
                 </ul>
-              </Popup>{' '}
+              </Popup>
             </Marker>
           )
         )}
