@@ -10,6 +10,26 @@ import {
 import { icon } from 'leaflet';
 import { getAllStates } from '../../client';
 
+interface AircraftState {
+  icao24: string;
+  callsign: string;
+  origin_country: string;
+  time_position: number;
+  last_contact: number;
+  longitude: number;
+  latitude: number;
+  baro_altitude: number;
+  on_ground: boolean;
+  velocity: number;
+  true_track: number;
+  vertical_rate: number;
+  sensors: number[];
+  geo_altitude: number;
+  squawk: string;
+  spi: boolean;
+  position_source: number;
+}
+
 const stateToObject = ([
   icao24,
   callsign,
@@ -46,7 +66,7 @@ const stateToObject = ([
   string,
   boolean,
   number
-]) => ({
+]): AircraftState => ({
   icao24,
   callsign,
   origin_country,
@@ -100,31 +120,34 @@ function CurrentPositionMarker({
 }
 
 function Map() {
-  const [markers, setMarkers] = useState([]);
+  const [markers, setMarkers] = useState<AircraftState[]>([]);
   const [currentLocation, setCurrentLocation] = useState<GeolocationPosition>();
 
+  const loadStates = () => {
+    getAllStates()
+      .then(({ data: { states } }) => {
+        const aircraft = states
+          .map(stateToObject)
+          .filter(
+            ({ on_ground, latitude, longitude }: AircraftState) =>
+              !on_ground && !!latitude && !!longitude
+          );
+
+        setMarkers(aircraft);
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
-    getAllStates().then(({ data: { states } }) => {
-      const aircraft = states
-        .map(stateToObject)
-        .filter(
-          ({
-            on_ground,
-            latitude,
-            longitude,
-          }: {
-            on_ground: boolean;
-            latitude: number;
-            longitude: number;
-          }) => !on_ground && !!latitude && !!longitude
-        );
-
-      setMarkers(aircraft);
-    });
-
+    loadStates();
+    const intervalId = setInterval(loadStates, 60 * 1000);
     navigator.geolocation.getCurrentPosition((geolocationPosition) => {
       setCurrentLocation(geolocationPosition);
     });
+
+    return () => {
+      clearInterval(intervalId);
+    };
   }, []);
 
   const airplaneIcon = icon({
