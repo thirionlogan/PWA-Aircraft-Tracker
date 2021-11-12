@@ -100,6 +100,7 @@ function CurrentPositionMarker({
         : [40.7608, -111.891]
     );
   }, [currentLocation]);
+
   return currentLocation?.coords ? (
     <Marker
       position={[
@@ -123,7 +124,7 @@ function Map() {
   const [markers, setMarkers] = useState<AircraftState[]>([]);
   const [currentLocation, setCurrentLocation] = useState<GeolocationPosition>();
 
-  const loadStates = () => {
+  const loadStates = () =>
     getAllStates()
       .then(({ data: { states } }) => {
         const aircraft = states
@@ -136,7 +137,6 @@ function Map() {
         setMarkers(aircraft);
       })
       .catch(() => {});
-  };
 
   useEffect(() => {
     loadStates();
